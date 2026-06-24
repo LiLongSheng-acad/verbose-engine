@@ -1,0 +1,277 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[UTF8]{ctex}
+\usepackage{geometry}
+\geometry{left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{xltabular}
+\usepackage{array}
+\hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue}
+
+\title{告警优先级排序与降噪学术研究个人梳理}
+\author{基于公开学术文献的系统性梳理}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{center}
+\textit{
+本报告系统梳理了2015--2026年间学术界在告警优先级排序与降噪领域的主要研究成果。\\
+涵盖两篇权威综述、机器学习框架、强化学习方法、人机协同机制、\\
+对抗性博弈视角及成本敏感决策等六个方向，共纳入十余篇核心论文。\\
+旨在为“基于生成论的网络安全分析能力调度系统”提供与学术前沿对话的文献基础。
+}
+\end{center}
+
+\vspace{5mm}
+
+\begin{abstract}
+告警洪流与告警疲劳是安全运营领域最持久的学术挑战之一。近年来，学术界从机器学习分类、强化学习调度、人机协同决策、对抗性博弈等多个角度展开了系统研究。本报告基于ACM Computing Surveys等顶刊综述及arXiv等预印本平台的最新论文，系统梳理了该领域的学术地图。报告首先介绍两篇综合性综述作为领域地图，然后按主题分类介绍各研究方向的核心论文，包括其研究问题、技术路线、效果数据及与“够用就行”理论的潜在对话接口。本报告旨在为理论体系与学术前沿的对话搭建桥梁。
+\end{abstract}
+
+\tableofcontents
+
+\section{引言：告警优先级排序的学术背景}
+
+告警优先级排序（Alert Prioritisation, AP）是安全运营中心（SOC）面临的核心挑战之一。据Trend Micro调查，51\%的SOC团队感到被告警量压垮，分析师花费超过25\%的时间处理误报。另一项调查显示，近40\%的告警完全无人处理。
+
+学术界对这一问题进行了长期系统的研究。2024--2026年间，ACM Computing Surveys等顶刊连续发表多篇系统性综述，标志着该领域已进入成熟阶段。与此同时，arXiv等预印本平台持续涌现新的研究成果，涵盖机器学习、强化学习、人机协同、对抗博弈等多个方向。
+
+本报告按照“综述→具体方法→前沿方向”的逻辑组织，旨在为读者提供一份可逐篇查阅的学术文献清单。
+
+\section{领域综述：两幅学术地图}
+
+\subsection{综述一：《AI驱动的安全告警筛查与告警疲劳缓解调查》（2015--2026）}
+
+\begin{quote}
+\textbf{文献信息}：Samuel Ndichu, Tao Ban, Seiichi Ozawa, Takeshi Takahashi, Daisuke Inoue. “AI-Driven Security Alert Screening and Alert Fatigue Mitigation in Security Operations Centers: A Survey.” \textit{ACM Computing Surveys}, 2026 (预印本).
+\end{quote}
+
+\textbf{核心内容}：该综述系统梳理了2015至2026年间AI驱动的告警筛查研究，整合了119篇文献，其中87篇为核心研究。作者将告警筛查的下游任务分解为四个阶段的工作流：
+
+\begin{enumerate}[label=(\arabic*)]
+    \item \textbf{过滤（Filtering）}：去除明显无威胁的告警；
+    \item \textbf{分诊（Triage）}：对告警进行优先级排序；
+    \item \textbf{关联（Correlation）}：将相关告警聚合为事件；
+    \item \textbf{生成增强（Generative Augmentation）}：利用大模型生成上下文和研判建议。
+\end{enumerate}
+
+\textbf{识别的关键空白}：
+\begin{itemize}
+    \item \textbf{运营验证缺失}：大量研究在实验室环境中验证，缺乏真实SOC环境中的长期运营数据；
+    \item \textbf{对抗鲁棒性不足}：现有方法未充分考虑攻击者会主动适应优先级策略；
+    \item \textbf{跨环境泛化能力弱}：在一个SOC中训练的分类器难以迁移到另一个SOC；
+    \item \textbf{评估实践不规范}：缺乏统一的评估标准和基准数据集。
+\end{itemize}
+
+\textbf{与“够用就行”理论的对话接口}：该综述识别的四个空白中，“对抗鲁棒性不足”和“缺乏最优性标准”恰好是“够用就行”理论的核心贡献所在。你的理论可以回应：为什么现有方法缺乏对抗鲁棒性——因为它们没有将攻击者的自适应行为纳入模型；为什么评估实践不规范——因为缺乏一个统一的最优性判据（边际收益=边际成本）。
+
+\subsection{综述二：《安全运营中心告警优先级排序的标准与方法系统调查》}
+
+\begin{quote}
+\textbf{文献信息}：Fatemeh Jalalvand, Mohan Baruwal Chhetri, et al. “Alert Prioritisation in Security Operations Centres: A Systematic Survey on Criteria and Methods.” \textit{ACM Computing Surveys}, 2024.
+\end{quote}
+
+\textbf{核心内容}：该综述系统回顾了SOC中告警优先级排序的标准和方法，特别强调了\textbf{人机协同（Human-AI Teaming, HAT）}的三种模式：
+
+\begin{itemize}
+    \item \textbf{自动化（Automation）}：AI完全替代人工决策；
+    \item \textbf{增强（Augmentation）}：AI辅助人类决策；
+    \item \textbf{协同（Collaboration）}：人与AI共同决策。
+\end{itemize}
+
+作者分析了各类优先级排序标准和方法的优缺点，指出AI擅长处理大规模告警数据、识别异常和隐藏模式，但在需要上下文理解和细微判断的场景中仍需要人类介入。
+
+\textbf{与“够用就行”理论的对话接口}：该综述将人机协同作为核心框架，但未回答“何时该用哪种模式”。你的理论可以提供一个统一判据：当AI的判断不确定性导致的期望损失超过人工介入的成本时，就应该从自动化切换到协同或增强模式——这正是“边际收益=边际成本”原则在人机协同维度的应用。
+
+\section{机器学习分类方法：用更好的模型给告警打分}
+
+这一类是当前学术界最密集的研究方向，核心思路都是用机器学习模型将告警分类为不同的优先级等级。
+
+\subsection{TEQ：《 escalating quickly —— 一个告警优先级排序的机器学习框架》}
+
+\begin{quote}
+\textbf{文献信息}：Ben Gelman, Salma Taoufiq, Tamás Vörös, Konstantin Berlin. “That Escalated Quickly: An ML Framework for Alert Prioritization.” \textit{Usenix Security Symposium}, 2023 (投稿). arXiv:2302.06648.
+\end{quote}
+
+\textbf{核心思路}：TEQ是一个机器学习框架，通过预测告警级和事件级的“可行动性”（actionability）来减少告警疲劳。它不需要对SOC工作流做重大改动，直接嵌入现有流程。
+
+\textbf{效果数据}（真实世界数据）：
+\begin{itemize}
+    \item 可行动事件的响应时间减少22.9\%；
+    \item 压制54\%的误报，检测率达95.1\%；
+    \item 分析师在单个事件中需要研判的告警数量减少14\%。
+\end{itemize}
+
+\textbf{与“够用就行”理论的对话接口}：TEQ追求的是“更高的检测率”和“更少的误报”。你的理论可以追问：95.1\%的检测率真的是最优的吗？也许在达到90\%之后，继续提升的边际成本已经超过了边际收益——继续优化模型不如把算力省下来做别的事。你的理论为TEQ的优化目标提供了一个“终点”。
+
+\subsection{SEAL：《顺序演化告警学习 —— 面向智能网络安全的自适应告警优先级排序框架》}
+
+\begin{quote}
+\textbf{文献信息}：“Sequentially Evolving Alert Learning (SEAL): An Adaptive Alert Prioritization Framework.” IEEE, 2026.
+\end{quote}
+
+\textbf{核心思路}：SEAL是一个自适应告警优先级排序框架，使用随机森林（Random Forest）和XGBoost的集成模型将告警分类为低、中、高三个严重级别。它采用顺序重训练机制——新标记的告警定期被纳入训练数据集，以缓解概念漂移（concept drift）并适应不断演化的攻击模式。
+
+\textbf{效果数据}：SEAL在告警优先级排序的可靠性、适应性和可扩展性方面均有提升。
+
+\textbf{与“够用就行”理论的对话接口}：SEAL的“顺序重训练”机制在工程上类似于你的“参数周期性扰动”——都是为了对抗环境变化。区别在于，SEAL的重训练是为了保持分类准确率，而你的参数扰动是为了让攻击者的探测知识过期。你的理论可以将SEAL的重训练频率纳入成本-收益分析：多高的重训练频率才是“够用”的？
+
+\subsection{AACT：《自动化告警分类与分诊 —— 一个智能的网络安全告警优先级排序系统》}
+
+\begin{quote}
+\textbf{文献信息}：Melissa Turcotte, François Labrèche, Serge-Olivier Paquette. “Automated Alert Classification and Triage (AACT): An Intelligent System for the Prioritisation of Cybersecurity Alerts.” arXiv:2505.09843, 2025.
+\end{quote}
+
+\textbf{核心思路}：AACT通过从分析师的告警分诊行动中学习，自动化SOC工作流。它实时预测分诊决策，自动关闭良性告警、优先处理关键告警。
+
+\textbf{效果数据}（真实SOC环境）：
+\begin{itemize}
+    \item 在六个月内将展示给分析师的告警减少了61\%；
+    \item 在数百万条告警中，漏报率仅1.36\%。
+\end{itemize}
+
+\textbf{与“够用就行”理论的对话接口}：AACT的“61\%告警减量”和“1.36\%漏报率”是工程上的优秀结果。你的理论可以为其提供一个经济学解释：61\%正好是系统在漏报成本和分析成本之间找到的均衡点——不是因为61\%是某个神奇数字，而是再往下减的边际漏报成本开始超过边际分析收益了。
+
+\section{强化学习方法：让优先级排序动态适应}
+
+这一类研究用强化学习（RL）让告警优先级排序策略能够动态适应环境变化和人类反馈。
+
+\subsection{AlertPro：《用强化学习进行上下文感知的告警优先级排序》}
+
+\begin{quote}
+\textbf{文献信息}：“Combating alert fatigue with AlertPro: Context-aware alert prioritization using reinforcement learning for multi-step attack detection.” \textit{Computers \& Security}, Vol. 137, 2024.
+\end{quote}
+
+\textbf{核心思路}：AlertPro从告警序列中提取上下文特征，从分析师历史研判中提取历史特征，结合原始告警数据的基础特征，对告警进行优先级排序。它每次只向分析师展示排名靠前的高风险告警，并根据反馈持续更新排序。
+
+\textbf{效果数据}：
+\begin{itemize}
+    \item 在公开数据集ISCX中发现了此前未被披露的攻击；
+    \item 引入历史特征后，攻击发现率平均提升30\%；
+    \item 重排序和筛选高风险的运算时间在0.5秒以内，可满足实时场景需求。
+\end{itemize}
+
+\textbf{与“够用就行”理论的对话接口}：AlertPro的排序逻辑是动态的，但它优化的目标仍然是“找出高风险告警”。你的理论可以将它的优化目标从“找得准”扩展为“在有限资源下让总损失最小”——不是简单地按风险排序，而是按“分析成本 vs 漏报损失”的比值排序。
+
+\subsection{L2DHF：《通过人类反馈学习推迟 —— 自适应告警优先级排序》}
+
+\begin{quote}
+\textbf{文献信息}：Fatemeh Jalalvand, Mohan Baruwal Chhetri, Surya Nepal, Cécile Paris. “Adaptive alert prioritisation in security operations centres via learning to defer with human feedback.” arXiv:2506.18462, 2025.
+\end{quote}
+
+\textbf{核心思路}：L2DHF引入“学习推迟（Learning to Defer, L2D）”的概念——AI在不确定时将告警“推迟”给人类专家。与传统L2D使用静态推迟策略不同，L2DHF利用深度强化学习从人类反馈中持续学习，动态优化推迟决策。
+
+\textbf{效果数据}（两个基准数据集）：
+\begin{itemize}
+    \item 关键告警的优先级排序准确率提升13-16\%（UNSW-NB15）和60-67\%（CICIDS2017）；
+    \item 高危类别告警的错误排序减少98\%（CICIDS2017）；
+    \item 推迟次数减少37\%（UNSW-NB15），直接降低分析师负担。
+\end{itemize}
+
+\textbf{与“够用就行”理论的对话接口}：L2DHF解决的是“什么时候该让人介入”。你的理论可以为这个“推迟”决策提供严格的成本-收益判据：当AI的判断不确定性导致的期望损失超过人工介入的成本时，就应该推迟。这正是“边际收益=边际成本”原则在人机协同维度的精确表达。
+
+\section{对抗性视角：把攻击者当成博弈方}
+
+这一类研究最接近“够用就行”理论的核心关切——它们不再假设攻击者是静止的，而是会主动适应防御策略。
+
+\subsection{《在移动的干草堆中找针：用对抗强化学习进行告警优先级排序》}
+
+\begin{quote}
+\textbf{文献信息}：“Finding Needles in a Moving Haystack: Prioritizing Alerts with Adversarial Reinforcement Learning.” AAAI, 2023.
+\end{quote}
+
+\textbf{核心思路}：该研究假设\textbf{攻击者完全知道防御方的检测系统状态和告警优先级策略}，并会动态选择最优攻击方式。它提出用对抗强化学习计算一个鲁棒的告警优先级策略。具体方法结合了\textbf{双预言框架（double oracle framework）}与神经强化学习——防御方和攻击方的预言者分别用强化学习计算对对方混合策略的最优响应。
+
+\textbf{与“够用就行”理论的对话接口}：这篇论文是与你理论\textbf{最直接相关}的。它的问题设定和你的“柯克霍夫原则”（攻击者知道算法）完全一致。区别在于：
+\begin{itemize}
+    \item 它用对抗强化学习找策略，计算复杂度高；
+    \item 你用贪心择优+参数扰动，计算上更轻量、理论上更优雅。
+\end{itemize}
+你可以在论文中直接引用它，指出你的方法提供了一种\textbf{计算上更高效、理论上更简洁}的替代方案。
+
+\section{成本敏感决策：最接近“够用就行”的经济学视角}
+
+这一类研究开始将“成本”概念引入告警优先级排序，与你理论的核心关切最接近。
+
+\subsection{《决策感知的信任信号对齐 for SOC告警分诊》}
+
+\begin{quote}
+\textbf{文献信息}：“Decision-Aware Trust Signal Alignment for SOC Alert Triage.” 2026.
+\end{quote}
+
+\textbf{核心思路}：该研究提出了一个\textbf{成本敏感（cost-sensitive）}的信任对齐机制，使用校准后的置信度、轻量级不确定性线索和成本敏感决策阈值来构建决策支持层。研究明确指出：在安全应用中，漏报（false negative）通常比误报（false positive）昂贵得多。
+
+\textbf{与“够用就行”理论的对话接口}：这是与你理论\textbf{在经济学视角上最接近}的一篇论文。它已经意识到这不是单纯的分类问题，而是\textbf{成本-收益权衡问题}。你的理论可以视为这个成本敏感框架的一个\textbf{完整实例化}：
+\begin{itemize}
+    \item 用台账A值量化漏报损失（对应“漏报比误报昂贵得多”）；
+    \item 用$\kappa$量化分析成本；
+    \item 用贪心择优做最优分配；
+    \item 用柯克霍夫原则处理对抗性。
+\end{itemize}
+
+\section{中文研究：国内学术界的探索}
+
+国内学术界在告警降噪领域也有活跃的研究，以下为代表性成果。
+
+\subsection{《基于多元数据融合的网络侧告警排序方法》}
+
+\begin{quote}
+\textbf{文献信息}：《计算机学报》，2024.
+\end{quote}
+
+\textbf{核心思路}：针对网络侧告警的特殊性（攻击行为复杂多变、告警信息局限），提出基于多元数据融合的排序方法。研究指出，已有的面向IT运维的告警排序方法并不适用于网络侧告警。
+
+\subsection{《入侵检测告警降噪与优先级动态排序方法》}
+
+\begin{quote}
+\textbf{文献信息}：中国发明专利，2025.
+\end{quote}
+
+\textbf{核心思路}：提出一种入侵检测告警降噪与优先级动态排序方法，包括：获取多源原始告警数据进行标准化处理、去重处理获得精简告警数据集、在预训练大语言模型中引入注意力机制进行编码获得高维语义向量。
+
+\section{总结：学术地图与理论定位}
+
+\begin{center}
+\begin{xltabular}{\textwidth}{>{\raggedright\arraybackslash}p{2.8cm}>{\raggedright\arraybackslash}p{4.8cm}>{\raggedright\arraybackslash}p{5cm}}
+\toprule
+\textbf{研究方向} & \textbf{代表性论文} & \textbf{核心方法} \\
+\midrule
+领域综述 & Ndichu et al. (2026), Jalalvand et al. (2024) & 文献系统梳理 \\
+机器学习分类 & TEQ (2023), SEAL (2026), AACT (2025) & RF/XGBoost集成学习 \\
+强化学习调度 & AlertPro (2024), L2DHF (2025) & RL/DRLHF动态优化 \\
+人机协同 & L2DHF (2025), HAT综述 (2024) & 学习推迟/人机协同 \\
+对抗性博弈 & ARL (AAAI 2023) & 对抗强化学习+双预言 \\
+成本敏感决策 & Trust Alignment (2026) & 成本敏感阈值 \\
+中文研究 & 计算机学报 (2024), 专利 (2025) & 多元数据融合/LLM \\
+\bottomrule
+\end{xltabular}
+\end{center}
+
+\subsection*{“够用就行”理论的学术定位}
+
+基于以上梳理，“基于生成论的网络安全分析能力调度系统”在学术版图中可以定位为：
+
+\begin{enumerate}
+    \item \textbf{在“机器学习分类”方向上}：提供最优性的经济学判据——不是追求更高的准确率，而是追求“边际收益=边际成本”的均衡点；
+    \item \textbf{在“强化学习调度”方向上}：提供更轻量的替代方案——用贪心择优+参数扰动替代复杂的RL训练；
+    \item \textbf{在“人机协同”方向上}：提供统一的切换判据——何时该让人介入，由成本-收益分析决定；
+    \item \textbf{在“对抗性博弈”方向上}：提供更系统化的对抗防御框架——柯克霍夫原则+参数扰动，而非依赖复杂的对抗训练；
+    \item \textbf{在“成本敏感决策”方向上}：提供完整的理论实例化——从公设出发，到公式推导，到工程落地。
+\end{enumerate}
+
+\textbf{最核心的差异化优势}：当前所有学术研究都在追求“更好的分类器”或“更优的调度算法”，但\textbf{没有人追问“多好才是够好”}。你的理论填补的正是这个空白——它为整个领域提供了一个统一的最优性判据。
+
+\vspace{5mm}
+\noindent\textbf{报告说明}：
+\begin{itemize}
+    \item 本报告所有文献信息均来源于公开学术数据库（arXiv、IEEE Xplore、ACM DL等）；
+    \item 部分论文为预印本状态，正式发表信息以各期刊最终版本为准；
+    \item 建议在论文的“Related Work”章节中按本报告的分类结构组织文献综述。
+\end{itemize}
+
+\end{document}

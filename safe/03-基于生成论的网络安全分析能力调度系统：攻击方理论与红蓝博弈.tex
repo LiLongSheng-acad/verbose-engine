@@ -1,0 +1,333 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[UTF8]{ctex}
+\usepackage{geometry}
+\geometry{left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{xltabular}
+\hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue}
+
+\newtheorem{definition}{定义}[section]
+\newtheorem{theorem}{定理}[section]
+\newtheorem{proposition}{命题}[section]
+\newtheorem{corollary}{推论}[section]
+\newtheorem{remark}{注记}[section]
+
+\title{基于生成论的网络安全分析能力调度系统\\
+第3卷：攻击方理论与红蓝博弈}
+\author{李龙胜}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{center}
+\textit{
+攻击者不是噪声源，而是理性的博弈方。\\
+他们也有预算约束、也要做成本收益分析、也会协同或竞争。\\
+本卷对称地建立攻击方的生成步系统，\\
+推导逼移策略的最优时机与最优量，\\
+构建完整的红队决策树，\\
+并分析多攻击方协同与竞争的博弈均衡。\\
+防御方视角见第1卷和第2卷。
+}
+\end{center}
+
+\vspace{5mm}
+
+\begin{abstract}
+第3卷从攻击方视角建立完整的理论体系。
+3.1节对称地建立攻击方的生成步系统实例化，
+定义成本-质量谱和信息暴露成本。
+3.2节建立攻防交互函数，
+完成完全信息与不完全信息下的均衡分析，
+得出柯克霍夫原则不对称倾斜消耗战的三个核心推论。
+3.3节推导逼移策略的最优逼移量和最优时机，
+建立蓝队能力饱和感知指标。
+3.4节将侦察、探测、逼移、攻击执行、复盘学习五阶段
+整合为完整的红队决策树，
+由贪心择优保障每一步的最优性。
+3.5节将博弈从两方扩展到多方，
+分析协同效应与竞争负外部性。
+\end{abstract}
+
+\tableofcontents
+
+\section{3.1 攻击方生成步系统实例化}
+
+\subsection{状态空间}
+
+攻击方的状态由资源余量、对防御方的信念和攻击进度三部分组成。
+
+\begin{definition}[攻击方状态]
+攻击方在时刻 $T$ 的状态为
+\[
+s_T^{\text{att}} = (R_{\text{comp}}, R_{\text{IP}}, I_{\text{def}}, \mathcal{P}_T),
+\]
+其中：
+\begin{itemize}
+    \item $R_{\text{comp}} \in [0, C_{\text{comp}}]$：剩余算力资源。
+    \item $R_{\text{IP}} \in [0, C_{\text{IP}}]$：剩余可用IP/肉鸡数量。
+    \item $I_{\text{def}}$：攻击方对防御方参数的信念状态（概率分布）。
+    \item $\mathcal{P}_T$：已建立的攻击路径集合。
+\end{itemize}
+\end{definition}
+
+\subsection{生成步：攻击尝试}
+
+攻击方的操作统一为攻击尝试，不预先区分真攻击与假攻击——真或假由该尝试是否命中防御方脆弱点决定。
+
+\begin{definition}[攻击尝试]
+一次攻击尝试 $U^{\text{att}}$ 包括：
+\begin{enumerate}[label=(\arabic*)]
+    \item 选择目标资产 $j$。
+    \item 选择触发的告警类别 $i$。
+    \item 选择质量等级 $\ell \in [0,1]$：
+          $\ell = 0$ 为全自动扫描（制造成本低、隐秘性低），
+          $\ell = 1$ 为手工高级攻击（制造成本高、隐秘性高）。
+    \item 确定payload内容。
+\end{enumerate}
+\end{definition}
+
+\subsection{记录成本函数}
+
+攻击方的记录成本由算力消耗、IP消耗和信息暴露风险三部分组成。
+
+\begin{definition}[攻击方记录成本]
+一次攻击尝试的记录成本为
+\[
+R^{\text{att}}(s_T, U^{\text{att}}) = \kappa_{\text{comp}}(\ell) + \kappa_{\text{IP}} + \rho \cdot \Delta I_{\text{leak}},
+\]
+其中：
+\begin{itemize}
+    \item $\kappa_{\text{comp}}(\ell)$：算力消耗，随 $\ell$ 递增且严格凸。
+    \item $\kappa_{\text{IP}}$：IP/肉鸡消耗。
+    \item $\rho \cdot \Delta I_{\text{leak}}$：信息暴露成本，
+          $\Delta I_{\text{leak}} = I(\theta; y \mid U^{\text{att}})$ 为
+          攻击尝试泄露的防御方参数信息量。
+\end{itemize}
+\end{definition}
+
+\subsection{容量约束与贪心择优}
+
+攻击方总资源有限，受预算 $C_{\text{comp}}$ 和 $C_{\text{IP}}$ 约束。
+攻击方在每一步选择使期望净收益最大的攻击尝试：
+\[
+U^* = \arg\max_{U \in \mathcal{A}(s_T)} \left[
+\mathbb{E}[\text{防御方漏报损失}] - R^{\text{att}}(s_T, U) \right].
+\]
+
+攻击方GS实例化满足生成步系统的全部四条公设，
+与防御方GS完全对称。
+
+\section{3.2 攻防交互与均衡分析}
+
+\subsection{交互函数}
+
+攻防交互由两条方向相反的通道构成。
+
+\textbf{通道一（攻击方 $\to$ 防御方）}：攻击尝试触发告警，消耗防御方分析能力。
+单次攻击尝试对防御方的期望分析能力消耗为
+\[
+\Delta C_{\text{def}} = r_i \cdot \kappa_i^{\text{def}} \cdot (1 + \eta \ell),
+\]
+其中 $\eta > 0$ 为质量敏感系数。
+若攻击尝试恰好命中脆弱点，期望漏报损失为
+\[
+\Delta V_{\text{def}} = (1 - r_i) \cdot q_{\text{hit}} \cdot \alpha_i A_i.
+\]
+
+\textbf{通道二（防御方 $\to$ 攻击方）}：防御方的裁定结果被攻击方观察，
+用于更新对防御方参数的信念。
+攻击方通过贝叶斯更新修正后验：
+\[
+P(\theta \mid y) \propto P(y \mid \theta) P(\theta).
+\]
+信息泄露量由互信息 $\Delta I_{\text{leak}} = I(\theta; y \mid U^{\text{att}})$ 度量。
+
+\subsection{完全信息均衡}
+
+假设双方完全知道彼此参数。
+防御方的最优响应是按 $\beta_i$ 降序分配分析能力，
+攻击方的最优响应是集中资源于防御方分析率最低的告警类型。
+
+\textbf{均衡特征}：防御方被迫将分析率全部设为1，
+分析能力虚部被压缩到零，够用就行原则无法运作。
+
+\subsection{不完全信息均衡（柯克霍夫原则生效）}
+
+防御方参数 $A_i^{\min}, \alpha_i$ 为秘密，
+攻击方只持有先验信念 $P(\theta)$。
+参数保密使攻击方在不确定性下决策，无法精确集中资源。
+参数周期性扰动使攻击方的历史观测过期，
+需持续投入侦察资源。
+
+\textbf{三个核心推论}：
+
+\begin{corollary}[虚部保留]
+在不完全信息均衡中，防御方可以安全保留分析能力虚部。
+够用就行不仅是“省着用”，更是“可以有选择地省，且让对手猜不透省在哪一块”。
+\end{corollary}
+
+\begin{corollary}[贪心趋近均衡]
+双方各自的贪心择优在交互中自动构成对彼此的最优响应，
+趋近于贝叶斯-纳什均衡，无需显式求解博弈。
+\end{corollary}
+
+\begin{corollary}[柯克霍夫不对称倾斜]
+攻击方需要持续消耗资源推断防御方参数，
+防御方无需对称消耗资源去反侦察。
+消耗战负担被不对称地转移给攻击方。
+\end{corollary}
+
+\section{3.3 逼移策略与最优时机}
+
+\subsection{逼移的形式化}
+
+攻击方在逼移方向 $i_{\text{b}}$ 制造大量假告警，
+迫使蓝队将分析能力集中到该方向，
+从而压缩真实攻击方向 $i_{\text{a}}$ 的覆盖度。
+
+\textbf{逼移效果函数}：
+蓝队因逼移而消耗的分析能力约为 $n_{\text{b}} \cdot \kappa_i^{\text{def}}$，
+这部分能力从其他类型中抽调，导致真实攻击方向覆盖减少。
+
+\textbf{最优逼移量} $n_{\text{b}}^*$ 由边际收益等于边际成本的均衡条件决定：
+\[
+\frac{\partial (\text{Gain})}{\partial n_{\text{b}}} = \frac{\partial J_{\text{diversion}}}{\partial n_{\text{b}}}.
+\]
+
+\subsection{蓝队能力饱和感知}
+
+攻击方不能直接读取蓝队的能力余量，
+但可通过观测外部行为推断。
+
+\textbf{响应延迟边际递增}：蓝队饱和时，告警响应延迟 $\tau(t)$ 偏离基线并持续上升。
+
+\textbf{封禁策略相变}：蓝队在压力下可能从精确封禁转为批量封禁——
+单IP封禁变为整C段封禁，这是极高价值的饱和信号。
+
+\textbf{周期末必然窗口}：若蓝队遵循每日容量上限，
+每个周期末尾存在必然饱和窗口，
+攻击方可结合基线模型进行预测。
+
+\subsection{最优时机的边际条件}
+
+设蓝队能力饱和度为 $s(t) = C_{\text{consumed}}(t)/C$。
+逼移的最优时机 $t^*$ 是 $s(t)$ 首次超越临界饱和度 $s^*$ 的时刻，
+边际条件为：
+\[
+\frac{d}{dt} \left[ \Delta r_{i_{\text{a}}}(t) \cdot q_{\text{hit}} \cdot \alpha_{i_{\text{a}}} A_{i_{\text{a}}} - J_{\text{diversion}}(t) \right]_{t=t^*} = 0.
+\]
+
+\textbf{被动窗口}：等待蓝队自然饱和，隐蔽但窗口时间不受控。
+\textbf{主动窗口}：通过预逼移加速蓝队消耗，人为提前饱和窗口，代价是暴露风险增加。
+
+\section{3.4 红队决策树}
+
+红队行动可形式化为五阶段决策闭环，
+每一步由贪心择优裁定最优操作。
+
+\subsection{阶段一：侦察——建立蓝队基线}
+
+发送低风险探测告警，记录响应延迟基线和封禁策略，
+建立时间维度上的基线模型。
+
+\subsection{阶段二：覆盖图探测——推断蓝队盲区}
+
+选择探测目标序列，优先探测“历史上最少被攻击”的类型。
+每次探测后使用贝叶斯更新修正对 $r_i$ 的信念。
+考虑蓝队反探测伪造，红队使用稳健估计。
+
+\textbf{输出}：蓝队覆盖图的估计 $\hat{\mathcal{K}}_{\text{covered}}$ 及各类型的估计分析率。
+
+\subsection{阶段三：策略选择——直接攻击还是逼移}
+
+\textbf{分支A}：存在明显盲区（$\hat{r}_i \approx 0$）→ 直接攻击。
+\textbf{分支B}：盲区不足但逼移可行 → 计算最优逼移量和时机，在 $t^*$ 发动逼移。
+\textbf{分支C}：蓝队警觉且未饱和 → 等待自然饱和或执行预逼移。
+
+\subsection{阶段四：攻击执行——成本-质量谱上的最优选择}
+
+若盲区确认，可使用低质量攻击（$\ell \to 0$）；
+若仍有残留覆盖，必须使用高质量攻击（$\ell \to 1$）。
+若攻击被阻断，更新信念并回到阶段二。
+
+\subsection{阶段五：复盘学习——更新蓝队模型}
+
+汇总全部观测数据，更新蓝队模型参数
+（$\hat{r}_i, \hat{\mathcal{K}}_{\text{covered}}, \hat{s}(t), \hat{T}_{\text{rot}}, \hat{\beta}$），
+作为下一次行动的初始信念。
+
+\textbf{贪心择优保障}：红队不需要全局规划，
+每步选择当前信念下期望净收益最大的操作，
+贪心最优性定理保证全局最优。
+
+\section{3.5 多攻击方协同与竞争}
+
+\subsection{协同的形式化}
+
+攻击方之间的协同程度由协同参数 $\theta_{mn} \in [0,1]$ 描述。
+协同产生三种增益：
+\begin{itemize}
+    \item \textbf{信息共享}：联盟只需支付一份侦察成本。
+    \item \textbf{分工协同}：让最擅长的攻击方负责对应阶段，总效率严格优于各自为战。
+    \item \textbf{轮班消耗}：多个攻击方无缝轮班施压，蓝队在两个时段均无恢复窗口。
+\end{itemize}
+
+\subsection{竞争的负外部性}
+
+非协同攻击方之间产生三种负外部性：
+\begin{itemize}
+    \item \textbf{目标冲突}：攻击方A2的破坏性操作触发蓝队全局警戒升级，损害A1的利益。
+    \item \textbf{路径冲突}：多个攻击方瞄准同一漏洞，先成功者导致后来者路径被封堵。
+    \item \textbf{信息污染}：所有攻击方的信息暴露共享同一个蓝队检测能力池，
+          形成公共地悲剧——单方造成的污染由所有方共同承担。
+\end{itemize}
+
+\subsection{防御方分而治之策略}
+
+防御方可利用攻击方之间的竞争分化瓦解：
+\begin{itemize}
+    \item \textbf{差异化分析率}：对不同攻击方关联的告警类型设置不同分析率。
+    \item \textbf{诱导竞争}：故意在某方向制造“已被攻破”的假象，加剧攻击方之间的抢先竞争。
+    \item \textbf{选择性忽略}：对某些攻击方的低成本攻击故意不响应，
+          引诱其在该方向持续消耗资源，将分析能力集中于更高威胁的攻击方。
+\end{itemize}
+
+\section{诚实标注}
+
+\begin{center}
+\begin{xltabular}{\textwidth}{c|X|c}
+\toprule
+\textbf{命题} & \textbf{状态} & \textbf{层级} \\
+\midrule
+攻击方GS实例化 & 状态空间、生成步、成本函数、容量约束已定义，与防御方完全对称 & II \\
+成本-质量谱的凸性假设 & 经济学类比支撑，实际凸性参数待标定 & III \\
+攻防交互函数 & 两条通道的结构完整，解析式已给出 & II \\
+完全信息均衡 & 最优响应函数已求解，均衡特征已定性分析 & II \\
+不完全信息均衡与三个推论 & 贝叶斯-纳什均衡结构已建立，信息不对称效应已定性论证 & II \\
+最优逼移量与时机 & 边际条件已给出，精确求解需蓝队消耗曲线经验数据 & II \\
+饱和感知指标 & 因果关系明确，定量阈值需各目标基线建立 & II \\
+红队决策树五阶段闭环 & 框架完整，与已有理论无缝衔接 & II \\
+贪心择优保障全局最优性 & 条件满足——成本函数凸性和进展单调性已验证 & II \\
+多攻击方协同与竞争博弈 & 参与者、策略空间、收益函数已定义 & II \\
+协同效应与竞争负外部性 & 形式化推导已完成，机制明确 & II \\
+防御方分而治之策略 & 启发式策略已形式化，严格最优解待数值模拟 & II \\
+\bottomrule
+\end{xltabular}
+\end{center}
+
+\vspace{5mm}
+\noindent\textbf{文档信息}：
+\begin{itemize}
+    \item 作者：李龙胜
+    \item 版本：v1.0（四卷体系重构第3卷）
+    \item 许可：CC BY 4.0
+    \item 前置依赖：第0卷、第1卷、第2卷
+\end{itemize}
+
+\end{document}

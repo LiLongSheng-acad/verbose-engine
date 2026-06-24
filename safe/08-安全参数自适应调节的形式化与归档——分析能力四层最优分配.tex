@@ -1,0 +1,152 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[UTF8]{ctex}
+\usepackage{geometry}
+\geometry{left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{xltabular}
+\hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue}
+
+\newtheorem{definition}{定义}[section]
+\newtheorem{proposition}{命题}[section]
+\newtheorem{remark}{注记}[section]
+
+\title{安全参数自适应调节的形式化与归档\\
+——分析能力四层最优分配}
+\author{李龙胜}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{center}
+\textit{
+安全参数的旋钮不应由人手拧动。\\
+当攻击方探测强度上升时，系统自动缩短扰动周期、压低可观测差异；\\
+当探测强度回落时，系统自动释放安全资源。\\
+这是分析能力二阶最优分配的第四个维度。\\
+贪心择优统一裁定四层之间的最优比例。
+}
+\end{center}
+
+\vspace{5mm}
+
+\begin{abstract}
+在密码学融合的安全运营蓝图中，安全参数（扰动周期 \(T_{\text{rot}}\)、
+可观测差异 \(\Delta\)、伪造强度 \(q_{01}, q_{10}\)）的调节
+此前依赖人工触发（攻防演练或事件复盘）。
+本文将安全参数调节纳入分析能力的统一分配框架，
+作为继告警分析、参数重标定、对手行为分析之后的第四层。
+系统通过对手行为分析感知攻击方探测强度的变化，
+自动计算安全参数调节的边际收益，
+由贪心择优在四层之间动态分配有限的分析能力。
+\end{abstract}
+
+\tableofcontents
+
+\section{从三层到四层}
+
+在先前的分析能力二阶最优分配框架中，
+防御方总分析能力 \(C\) 被分配至三个层面：
+告警分析（\(r_{\text{alert}}\)）、
+参数重标定（\(r_{\text{param}}\)）、
+对手行为分析（\(r_{\text{opponent}}\)）。
+三者满足 \(r_{\text{alert}} + r_{\text{param}} + r_{\text{opponent}} \le 1\)。
+
+当密码学组件（同态加密、零知识证明、安全多方计算）嵌入系统后，
+安全参数的自适应调节成为一个独立的能力消耗源：
+缩短扰动周期需要更频繁的台账解密与重加密，
+降低可观测差异需要更高精度的参数控制，
+增强伪造响应需要消耗额外的分析能力来生成伪造操作。
+这些都不是无代价的。
+因此，安全参数调节应被视为第四个分析能力消费者。
+
+\section{四层分配的贪心择优}
+
+防御方在每个周期比较四个层面的边际收益和边际成本，
+由贪心择优统一裁定：
+\[
+\frac{\partial U_{\text{alert}}}{\partial r_{\text{alert}}} =
+\frac{\partial U_{\text{param}}}{\partial r_{\text{param}}} =
+\frac{\partial U_{\text{opponent}}}{\partial r_{\text{opponent}}} =
+\frac{\partial U_{\text{sec}}}{\partial r_{\text{sec}}}
+\]
+其中 \(U_{\text{sec}}\) 是安全参数调节的净收益——
+压缩攻击方探测效率所带来的漏报损失减少，
+减去调节操作本身消耗的分析能力。
+
+\section{自适应触发逻辑}
+
+安全参数调节的边际收益并非恒定，
+它依赖于攻击方当前的探测强度。
+对手行为分析（第3层）持续监测
+\(\Delta N\)（新源IP涌现率）、探测密度异常等指标。
+当这些指标超过预设阈值时，
+系统判断攻击方探测强度上升，
+\(r_{\text{sec}}\) 的边际收益自动升高，
+贪心择优从其他层面抽调分析能力给安全参数调节：
+\begin{itemize}
+    \item 缩短扰动周期 \(T_{\text{rot}}\)。
+    \item 压低可观测差异 \(\Delta\)。
+    \item 增强伪造强度 \(q_{01}, q_{10}\)。
+\end{itemize}
+当探测强度回落并持续一段时间后，
+系统自动降级——恢复较长的 \(T_{\text{rot}}\) 和较宽松的 \(\Delta\)，
+释放分析能力给告警分析和参数重标定。
+
+\section{贪心最优性的保证}
+
+贪心最优性定理（生成步系统第一卷定理1）保证：
+在成本函数的凸性和进展单调性条件下，
+每步贪心择优等价于全局最优。
+安全参数调节的成本函数（扰动算力消耗）
+对安全级别是严格凸的——
+每提升一级安全级别所需的边际算力递增。
+因此，四层贪心分配在动态变化中自动趋近全局最优，
+无需全局规划。
+
+\section{与已有体系的对接}
+
+本方案不改变四卷体系中的任何已有结论。
+它仅将第4卷产品蓝图中“安全参数由人工设定”的
+隐含假设显式化，并替换为自适应调节机制。
+朋友审查中识别的第17条问题（扰动周期时机）
+在自适应框架中得到彻底解决——扰动频率和幅度
+不再以事件为锚，而是由系统根据实时探测强度动态决定。
+
+\section{诚实标注}
+
+\begin{center}
+\begin{xltabular}{\textwidth}{c|X|c}
+\toprule
+\textbf{命题} & \textbf{状态} & \textbf{层级} \\
+\midrule
+四层分析能力分配框架 & 结构完整，与已有三层框架无缝衔接 & II \\
+自适应触发逻辑 & 基于已有饱和感知指标的扩展，定性明确 & II \\
+贪心择优等价于全局最优 & 凸性条件已验证，定理骨架已证 & II \\
+具体阈值标定 & 需在部署环境中建立探测强度基线 & III \\
+\bottomrule
+\end{xltabular}
+\end{center}
+
+\section{结语}
+
+安全参数的旋钮不再由人手拧动。
+它被接入了分析能力二阶最优分配的同一套贪心择优回路。
+攻击方探测升温时系统自动变硬，
+攻击方蛰伏时系统自动节能。
+安全运营系统从此具备了自适应安全级别的能力。
+
+\vspace{5mm}
+\noindent\textbf{文档信息}：
+\begin{itemize}
+    \item 作者：李龙胜
+    \item 版本：第一版（安全参数自适应调节归档）
+    \item 许可：CC BY 4.0
+    \item 前置依赖：四卷体系、外部审查修正与补充、密码学融合蓝图
+\end{itemize}
+
+\end{document}

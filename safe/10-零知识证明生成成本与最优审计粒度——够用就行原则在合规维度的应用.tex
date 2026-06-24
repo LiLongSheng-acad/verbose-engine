@@ -1,0 +1,203 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[UTF8]{ctex}
+\usepackage{geometry}
+\geometry{left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{xltabular}
+\hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue}
+
+\newtheorem{definition}{定义}[section]
+\newtheorem{proposition}{命题}[section]
+\newtheorem{remark}{注记}[section]
+
+\title{零知识证明生成成本与最优审计粒度\\
+——够用就行原则在合规维度的应用}
+\author{李龙胜}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{center}
+\textit{
+每条记录都生成证明，算力吃不消；\\
+从不出示证明，合规过不了。\\
+答案在中间——聚合证明。\\
+将一批记录打包，生成一个覆盖全批次的证明。\\
+批次太小则算力浪费，批次太大则审计盲区不可接受。\\
+最优批次大小恰好是边际审计风险等于边际算力消耗的均衡点。\\
+这是够用就行原则在合规维度上的直接应用。
+}
+\end{center}
+
+\vspace{5mm}
+
+\begin{abstract}
+在密码学融合的安全运营蓝图中，防御方需通过零知识证明向审计方自证合规。
+然而，生成零知识证明本身消耗算力——这部分算力来自有限的分析能力池。
+本文建立单体证明与聚合证明的成本模型，
+定义审计盲区风险与证明生成成本之间的权衡，
+推导最优聚合周期的解析表达式。
+该公式与同源关联优先定理中的 \(q_{\min}\) 阈值完全同构，
+均为边际成本等于边际收益的最优解。
+最优审计粒度被纳入四层分析能力分配框架，
+实现战时加密审计与平时节能审计的自适应切换。
+\end{abstract}
+
+\tableofcontents
+
+\section{问题的精确定位}
+
+在密码学融合蓝图中，防御方需要向审计方证明系统运行合规。
+需要被证明的内容包括：
+\begin{itemize}
+    \item 参数变更遵循了翻倍/衰减/下限保护规则。
+    \item 最优分析率计算正确。
+    \item 扰动操作按期执行。
+    \item 双轨台账同步无篡改。
+\end{itemize}
+
+生成这些证明的密码学操作需要消耗算力。
+这部分算力来自防御方的总分析能力池 \(C\)。
+在最严格的方案中，系统为每一条操作记录都生成独立的零知识证明，
+审计方可以逐条验证每一处细节的完全透明。
+
+但这种完全透明的代价是算力消耗极大。
+在最宽松的方案中，系统从不生成证明，
+算力负担为零，但无法通过合规审计。
+
+最优方案位于两者之间——聚合证明。
+
+\section{成本模型：单体 vs 聚合}
+
+\subsection{单体证明}
+
+设系统在单个审计周期内产生 \(N\) 条需要审计的操作记录。
+为每条记录生成独立零知识证明的单体成本为 \(\kappa_{\text{zkp}}\)。
+单体证明的总算力消耗为
+\[
+C_{\text{single}} = N \cdot \kappa_{\text{zkp}}.
+\]
+审计粒度最细，审计方可逐条验证每一条操作的正确性，审计盲区为零。
+
+\subsection{聚合证明}
+
+将 \(K\) 条记录聚合为一个批次，生成一个覆盖整个批次的聚合证明。
+聚合证明的生成成本约为单体证明的 \(1/K\)：
+\[
+C_{\text{agg}}(K) = \frac{N}{K} \cdot \kappa_{\text{zkp}}.
+\]
+代价是产生审计盲区：
+若某批次内存在违规操作，
+审计方只能发现该批次有问题，
+无法定位到具体的违规记录。
+盲区大小 \(B\) 正比于聚合批次大小 \(K\)。
+
+\section{最优聚合周期}
+
+\subsection{审计盲区风险成本}
+
+设审计盲区导致的潜在合规风险成本与盲区大小成正比：
+\[
+V_{\text{audit}}(K) = \alpha_{\text{audit}} \cdot K,
+\]
+其中 \(\alpha_{\text{audit}}\) 是审计风险敏感度系数，
+量度未能及时发现和定位违规操作带来的期望损失。
+
+\subsection{总成本与最优解}
+
+总成本为审计盲区风险与证明生成成本之和：
+\[
+J(K) = V_{\text{audit}}(K) + C_{\text{agg}}(K) = \alpha_{\text{audit}} \cdot K + \frac{N \cdot \kappa_{\text{zkp}}}{K}.
+\]
+
+对 \(K\) 求导并令其为零：
+\[
+\frac{dJ}{dK} = \alpha_{\text{audit}} - \frac{N \cdot \kappa_{\text{zkp}}}{K^2} = 0,
+\]
+得最优聚合批次
+\[
+K^* = \sqrt{\frac{N \cdot \kappa_{\text{zkp}}}{\alpha_{\text{audit}}}}.
+\]
+
+最优聚合周期为
+\[
+T^* = \frac{K^*}{\text{操作速率}}.
+\]
+
+该公式的数学结构与同源关联优先定理中的最优阈值 \(q_{\min}\)
+完全同构——两者都是边际成本等于边际收益的均衡点。
+这是够用就行原则在审计维度的直接应用。
+
+\subsection{极限行为}
+
+\begin{itemize}
+    \item 若 \(\kappa_{\text{zkp}} \to 0\)（证明生成成本极低）：
+          则 \(K^* \to 1\)——系统趋向于逐条审计，盲区趋于零。
+    \item 若 \(\alpha_{\text{audit}} \to 0\)（合规压力极低）：
+          则 \(K^* \to \infty\)——系统趋向于从不生成证明，算力消耗趋于零。
+    \item 若 \(N \to \infty\)（操作量极大）：
+          则 \(K^* \to \infty\)——聚合的规模效应增强，最优批次变大。
+\end{itemize}
+
+\section{动态审计粒度}
+
+审计需求不是静态的。
+当系统通过对手行为分析检测到攻击方探测强度升高时，
+进入战时审计——自动缩短聚合周期，提高审计粒度，
+确保所有防御操作可被即时审计。
+当探测强度回落时，自动放宽审计粒度，释放算力给告警分析。
+
+该动态调节机制被纳入已有的四层分析能力分配框架。
+审计粒度调节与扰动周期调节、伪造强度调节一道，
+共同构成第四层安全参数调节的子项。
+四层之间的最优分配由贪心择优统一裁定。
+
+\section{诚实标注}
+
+\begin{center}
+\begin{xltabular}{\textwidth}{c|X|c}
+\toprule
+\textbf{命题} & \textbf{状态} & \textbf{层级} \\
+\midrule
+单体证明成本模型 &
+\(\kappa_{\text{zkp}}\) 已有成熟的工程估算方法，
+具体值依赖所采用的零知识证明方案 &
+II \\
+聚合证明与审计盲区模型 &
+权衡关系明确，定性结论正确 &
+II \\
+最优聚合周期解析式 &
+推导严格，与同源关联优先定理完全同构 &
+II \\
+动态审计粒度调节 &
+已纳入四层分配框架，逻辑自洽 &
+II \\
+\(\alpha_{\text{audit}}\) 的精确标定 &
+依赖各合规环境的具体要求，需独立评估 &
+III \\
+\bottomrule
+\end{xltabular}
+\end{center}
+
+\section{结语}
+
+零知识证明的生成成本不再是系统设计的盲点。
+最优聚合周期公式为审计粒度的选择提供了可计算的均衡点。
+战时加密审计与平时节能审计的自适应切换，
+将合规成本纳入分析能力最优分配的同一套逻辑。
+
+\vspace{5mm}
+\noindent\textbf{文档信息}：
+\begin{itemize}
+    \item 作者：李龙胜
+    \item 版本：第一版（零知识证明生成成本归档）
+    \item 许可：CC BY 4.0
+    \item 前置依赖：密码学融合蓝图、四层分析能力分配框架、同源关联优先定理
+\end{itemize}
+
+\end{document}
