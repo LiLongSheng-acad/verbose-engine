@@ -1,0 +1,21 @@
+字段,含义,示例值,说明
+category,告警类别,命令执行,来自表一
+N,今日预计到达量,300,来自表一，或取近7天均值
+alpha_A,修正后漏报损失,1000000,来自表一，已乘来源衰减系数
+kappa,单条分析成本,1.14,#NAME?
+r_star_raw,理论最优分析率,1,αA > κ时为1，否则为0
+unit_consumption,单条分析消耗工时,0.033,=r_star_raw × t
+total_consumption,本类别预计消耗工时,9.9,=unit_consumption × N
+cumulative_consumption,累计消耗工时,—,按β值排序后累加
+r_star_final,最终执行分析率,1（或0.8/0.5/…）,配额紧张时从低β类别削减后的值
+actual_consumption,实际消耗工时,9.9,=r_star_final × N × t
+target_system,分流目标,SOC,来自表四
+,,,
+,,,
+,,,
+"这张表一旦有了，每天早上的工作流程就变成：
+
+打开表六
+看r_star_final列：哪些类型必须每条都看，哪些只看30%，哪些直接归档
+按target_system派发任务
+下班前把实际研判数据填入表五，触发校准",,,
